@@ -173,6 +173,7 @@ std::vector<std::string> convertDBEntries(std::ifstream& txtFile)
 
 		if(isCommentStarted || (prev == '*' && current == '/') || current == '\n')
 		{
+			// std::cout << "entry: " << entry << std::endl;
 			prevprev = prev;
 			prev = current;
 			continue;
@@ -195,6 +196,12 @@ std::vector<std::string> convertDBEntries(std::ifstream& txtFile)
 		entry += current;
 		prevprev = prev;
 		prev = current;
+		// std::cout << "entry: " << entry << std::endl;
+	}
+
+	if(entry.length() > 7) // At least 2 characters for key, 2 for type, 1 for value and 2 for space between the threes
+	{
+		entryVec.push_back(entry);
 	}
 
 	return entryVec;
@@ -222,15 +229,15 @@ std::vector<char> generatePayload(const std::vector<std::string>& entries)
 		payload.push_back('F');
 		for(const auto& c : entry.key) payload.push_back(c);
 		payload.push_back('\0');
-		if(entry.type == "U8") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_U8);
-		else if(entry.type == "S8") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_S8);
-		else if(entry.type == "U16") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_U16);
-		else if(entry.type == "S16") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_S16);
-		else if(entry.type == "U32") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_U32);
-		else if(entry.type == "S32") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_S32);
-		else if(entry.type == "U64") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_U64);
-		else if(entry.type == "S64") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_S64);
-		else if(entry.type == "CHAR") payload.push_back((char)DbTypeEnum::TYPE_OF_ENTRY_CHAR);
+		if(entry.type == "U8") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U8));
+		else if(entry.type == "S8") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S8));
+		else if(entry.type == "U16") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U16));
+		else if(entry.type == "S16") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S16));
+		else if(entry.type == "U32") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U32));
+		else if(entry.type == "S32") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S32));
+		else if(entry.type == "U64") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U64));
+		else if(entry.type == "S64") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S64));
+		else if(entry.type == "CHAR") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_CHAR));
 		else
 		{
 			std::cout << "ERROR: Unknown DB entry type = " << entry.type << std::endl;
@@ -253,12 +260,22 @@ bool tokenize(const char*& p, std::string& token, uint8_t index)
 	}
 
 	/* Or token is an actual argument */
+	char prev = '.';
 	token.clear(); // Clear the previous token
 	if(index == 2) // Special handle for value in each DB entry
 	{
 		while(*p)
 		{
-			token += *p++;
+			if((prev == ' ' || prev == '\t') && *p == prev)
+			{
+				// Ignore consecutive spaces or tabs
+			}
+			else
+			{
+				token += *p;
+			}
+			prev = *p;
+			++p;
 		}
 		--p;
 		// Remove " \t" from back
@@ -306,7 +323,7 @@ uint16_t getCRC16(uint8_t *startAddr, uint32_t numberBytes)
 void constructBinaryFile(const std::vector<char>& payload, std::ofstream& binFile)
 {
 	char c = 'H';
-	binFile.write(&c, 1); // DB Header
+	binFile.write(&c, 1); // DB Header Tag
 	c = 10;
 	binFile.write(&c, 1); // DB revision, currently hardcoded
 	c = 0;
@@ -324,7 +341,7 @@ void constructBinaryFile(const std::vector<char>& payload, std::ofstream& binFil
 	for(int i = 0; i < 4; ++i) binFile.write((char *)&totalPayloadBytes + i, 1); // Total bytes of payload (all DB entries)
 	for(const auto& ch : payload) binFile.write(&ch, 1); // Write DB payload (converted DB entries)
 	c = 'E';
-	binFile.write(&c, 1); // DB End Indication
+	binFile.write(&c, 1); // DB End Tag
 	uint16_t crc16 = getCRC16((uint8_t *)payload.data(), payload.size());
 	// std::cout << "crc16 = " << crc16 << std::endl;
 	if(!isBigEndian())
