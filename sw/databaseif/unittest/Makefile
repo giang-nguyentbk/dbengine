@@ -16,7 +16,8 @@ INCLUDE_DIR 	:= \
 		-I$(ROOT_DIR)/sw/databaseif/if \
 		-I$(ROOT_DIR)/sw/databaseif/inc \
 		-I$(ROOT_DIR)/sw/dbloader/inc \
-		# -I$(SDK_INC_DIR)
+		-I$(ROOT_DIR)/sw/common \
+		-I$(SDK_INC_DIR)
 
 MAIN		:= $(ROOT_DIR)/sw/databaseif/unittest/databaseIfTest.cc
 SRC1		:= $(ROOT_DIR)/sw/databaseif/src/databaseImpl.cc
@@ -46,7 +47,7 @@ $(BIN_DIR)/dbLoader.o: $(SRC2)
 
 $(BIN_DIR)/$(TARGET): $(OBJECTS)
 	@echo "  CXXLD \t $@"
-	@$(CXX) $^ -o $@
+	@$(CXX) $^ -L$(SDK_LIB_DIR) -ltraceifa -o $@
 
 run:
 	@$(BIN_DIR)/$(TARGET)

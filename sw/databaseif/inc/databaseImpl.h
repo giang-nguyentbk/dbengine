@@ -33,15 +33,15 @@ public:
 	DatabaseImpl& operator=(const DatabaseImpl& other) = delete;
 	DatabaseImpl& operator=(DatabaseImpl&& other) = delete;
 
-	IDatabase::ReturnCode get(const std::string& key, std::vector<uint8_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<int8_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<uint16_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<int16_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<uint32_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<int32_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<uint64_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<int64_t>& values) const override;
-	IDatabase::ReturnCode get(const std::string& key, std::vector<std::string>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<uint8_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<int8_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<uint16_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<int16_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<uint32_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<int32_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<uint64_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<int64_t>& values) const override;
+	ReturnCodeEnum get(const std::string& key, std::vector<std::string>& values) const override;
 
 
 private:

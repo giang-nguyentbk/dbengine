@@ -9,10 +9,13 @@
 
 #pragma once
 
-#include <iostream>
 #include <vector>
 #include <string>
 #include <optional>
+
+#include <enumUtils.h>
+
+using namespace CommonUtils::V1::EnumUtils;
 
 namespace DbEngine
 {
@@ -20,6 +23,42 @@ namespace DatabaseIf
 {
 namespace V1
 {
+
+enum class ReturnCodeRaw
+{
+	OK,
+	KEY_NOT_FOUND,
+	TYPE_MISMATCH,
+	UNDEFINED
+};
+
+class ReturnCodeEnum : public EnumType<ReturnCodeRaw>
+{
+public:
+	explicit ReturnCodeEnum(const ReturnCodeRaw& raw) : EnumType<ReturnCodeRaw>(raw) {}
+	explicit ReturnCodeEnum() : EnumType<ReturnCodeRaw>(ReturnCodeRaw::UNDEFINED) {}
+
+	std::string toString() const override
+	{
+		switch (getRawEnum())
+		{
+		case ReturnCodeRaw::OK:
+			return "OK";
+
+		case ReturnCodeRaw::KEY_NOT_FOUND:
+			return "KEY_NOT_FOUND";
+
+		case ReturnCodeRaw::TYPE_MISMATCH:
+			return "TYPE_MISMATCH";
+
+		case ReturnCodeRaw::UNDEFINED:
+			return "UNDEFINED";
+
+		default:
+			return "Unknown EnumType: " + std::to_string(toS32());
+		}
+	}
+};
 
 class IDatabase
 {
@@ -31,29 +70,21 @@ public:
 	IDatabase& operator=(const IDatabase& other) = delete;
 	IDatabase& operator=(IDatabase&& other) = delete;
 
-	enum class ReturnCode
-	{
-		OK,
-		KEY_NOT_FOUND,
-		TYPE_MISMATCH
-	};
-
-	virtual ReturnCode get(const std::string& key, std::vector<uint8_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<int8_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<uint16_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<int16_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<uint32_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<int32_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<uint64_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<int64_t>& values) const = 0;
-	virtual ReturnCode get(const std::string& key, std::vector<std::string>& values) const = 0;
-	// virtual ReturnCode get(const std::string& key, std::string& value) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<uint8_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<int8_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<uint16_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<int16_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<uint32_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<int32_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<uint64_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<int64_t>& values) const = 0;
+	virtual ReturnCodeEnum get(const std::string& key, std::vector<std::string>& values) const = 0;
 
 	template<typename T>
 	std::optional<std::vector<T>> autoGetVec(const std::string& key) noexcept
 	{
 		std::vector<T> values;
-		if(get(key, values) == ReturnCode::OK)
+		if(get(key, values).getRawEnum() == ReturnCodeRaw::OK)
 		{
 			if(std::is_same<T, std::string>::value)
 			{
@@ -74,7 +105,7 @@ public:
 		if(std::is_same<T, std::string>::value)
 		{
 			std::vector<T> values;
-			if(get(key, values) == ReturnCode::OK)
+			if(get(key, values).getRawEnum() == ReturnCodeRaw::OK)
 			{
 				// The original string value is store at last
 				return values.back();

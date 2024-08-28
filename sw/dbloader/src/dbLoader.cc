@@ -22,7 +22,7 @@ DbLoader::DbLoader(const std::string& binFilePath)
 {
 	if(!loadDb(binFilePath))
 	{
-		// ERROR TRACE
+		TPT_TRACE(TRACE_ERROR, SSTR("Failed to load DB binary file ", binFilePath));
 		return;
 	}
 }
@@ -32,7 +32,7 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 	std::ifstream dbFile(binFilePath);
 	if(!dbFile.is_open())
 	{
-		// ERROR TRACE
+		TPT_TRACE(TRACE_ERROR, SSTR("Could not open DB binary file ", binFilePath));
 		return false;
 	}
 
@@ -42,7 +42,7 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 	c = dbFile.get();
 	if(c != 'H')
 	{
-		// ERROR TRACE
+		TPT_TRACE(TRACE_ERROR, SSTR("The DB Header Tag 'H' was not correct ", std::string(1, c)));
 		dbFile.close();
 		return false;
 	}
@@ -51,7 +51,7 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 	c = dbFile.get();
 	if(c != 10)
 	{
-		// ERROR TRACE
+		TPT_TRACE(TRACE_ERROR, SSTR("The DB Revision '10' was not correct ", (int)c));
 		dbFile.close();
 		return false;
 	}
@@ -63,6 +63,7 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 	uint8_t buff[4];
 	for(int i = 0; i < 4; ++i) buff[i] = dbFile.get();
 	uint32_t totalPayloadBytes = be32toh(*(uint32_t *)buff); // When converting text-based DB file into binary file, we used Big Endian
+	TPT_TRACE(TRACE_INFO, SSTR("Total DB entry's payload size: ", totalPayloadBytes, " bytes!"));
 
 	// Analyze DB entries
 	for(auto i = 0u; i < totalPayloadBytes; c = dbFile.get(), ++i)
@@ -84,35 +85,35 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 			++i;
 			switch (c)
 			{
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U8):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_U8;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_U8)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U8);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S8):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_S8;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_S8)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S8);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U16):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_U16;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_U16)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U16);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S16):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_S16;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_S16)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S16);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U32):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_U32;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_U32)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U32);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S32):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_S32;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_S32)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S32);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U64):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_U64;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_U64)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U64);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S64):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_S64;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_S64)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S64);
 				break;
-			case static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_CHAR):
-				newEntry.type = DbTypeEnum::TYPE_OF_ENTRY_CHAR;
+			case static_cast<char>(toUnderlyingType(DbTypeEnumRaw::TYPE_OF_ENTRY_CHAR)):
+				newEntry.type.set(DbTypeEnumRaw::TYPE_OF_ENTRY_CHAR);
 				break;
 			default:
-				// ERROR TRACE
+				TPT_TRACE(TRACE_ERROR, SSTR("EnumType of this DB Entry was not recognized, ", (int)c));
 				dbFile.close();
 				return false;
 			}
@@ -126,12 +127,12 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 			}
 
 			// Tokenize the "value" string
-			if(newEntry.type == DbTypeEnum::TYPE_OF_ENTRY_CHAR)
+			if(newEntry.type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_CHAR)
 			{
-				// Sanity check, TYPE_OF_ENTRY_CHAR, "value" has two double-quote
+				// Sanity check, "value" will have two double-quote
 				if(valueStr.length() < 2 || valueStr.front() != '\"' || valueStr.back() != '\"')
 				{
-					// ERROR TRACE
+					TPT_TRACE(TRACE_ERROR, SSTR("Value field of this DB Entry too short or not in correct format: ", valueStr));
 					dbFile.close();
 					return false;
 				}
@@ -148,7 +149,7 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 			}
 			else
 			{
-				std::vector<std::string> values = tokenize(valueStr, ", ");
+				std::vector<std::string> values = tokenize(valueStr, ",");
 				for(const auto& v : values)
 				{
 					int base = 10;
@@ -164,38 +165,38 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 						auto numeric = std::stoll(v, &pos, base);
 						if(pos < v.length())
 						{
-							// ERROR TRACE, failed to convert
+							TPT_TRACE(TRACE_ERROR, SSTR("Failed to convert DB value into numeric: ", v));
 						}
 						else if(!isFitIntegralType(numeric, newEntry.type))
 						{
-							// ERROR TRACE, out of range
+							TPT_TRACE(TRACE_ERROR, SSTR("DB Value is out of range: ", v, ", compared to type ", newEntry.type.toString()));
 						}
 						else
 						{
-							switch (newEntry.type)
+							switch (newEntry.type.getRawEnum())
 							{
-							case DbTypeEnum::TYPE_OF_ENTRY_U8:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_U8:
 								newEntry.values.emplace_back((uint8_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_S8:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_S8:
 								newEntry.values.emplace_back((int8_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_U16:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_U16:
 								newEntry.values.emplace_back((uint16_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_S16:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_S16:
 								newEntry.values.emplace_back((int16_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_U32:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_U32:
 								newEntry.values.emplace_back((uint32_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_S32:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_S32:
 								newEntry.values.emplace_back((int32_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_U64:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_U64:
 								newEntry.values.emplace_back((uint64_t)numeric);
 								break;
-							case DbTypeEnum::TYPE_OF_ENTRY_S64:
+							case DbTypeEnumRaw::TYPE_OF_ENTRY_S64:
 								newEntry.values.emplace_back((int64_t)numeric);
 								break;
 							default:
@@ -205,8 +206,7 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 					}
 					catch(const std::exception& e)
 					{
-						// ERROR TRACE
-						// std::cerr << e.what() << '\n';
+						TPT_TRACE(TRACE_ERROR, SSTR("Raised an exception: ", e.what()));
 					}
 				}
 			}
@@ -219,7 +219,6 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 			std::vector<std::string> subKeys = tokenize(newEntry.key, "/");
 			for(const auto& sk : subKeys)
 			{
-				// std::cout << "m_dbDictionary insert: " << sk << std::endl;
 				m_dbDictionary[sk].insert(m_dbStorage.size() - 1); // Storing the index of entry in m_dbStorage vector
 			}
 		}
@@ -232,42 +231,42 @@ bool DbLoader::loadDb(const std::string& binFilePath)
 bool DbLoader::isFitIntegralType(const int64_t& valueToCheck, const DbTypeEnum& type)
 {
 	bool isFit = false;
-	if(type == DbTypeEnum::TYPE_OF_ENTRY_U8)
+	if(type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_U8)
 	{
 		if(valueToCheck <= std::numeric_limits<uint8_t>::max() && valueToCheck >= std::numeric_limits<uint8_t>::min())
 		{
 			isFit = true;
 		}
 	}
-	else if(type == DbTypeEnum::TYPE_OF_ENTRY_S8)
+	else if(type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_S8)
 	{
 		if(valueToCheck <= std::numeric_limits<int8_t>::max() && valueToCheck >= std::numeric_limits<int8_t>::min())
 		{
 			isFit = true;
 		}
 	}
-	if(type == DbTypeEnum::TYPE_OF_ENTRY_U16)
+	if(type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_U16)
 	{
 		if(valueToCheck <= std::numeric_limits<uint16_t>::max() && valueToCheck >= std::numeric_limits<uint16_t>::min())
 		{
 			isFit = true;
 		}
 	}
-	else if(type == DbTypeEnum::TYPE_OF_ENTRY_S16)
+	else if(type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_S16)
 	{
 		if(valueToCheck <= std::numeric_limits<int16_t>::max() && valueToCheck >= std::numeric_limits<int16_t>::min())
 		{
 			isFit = true;
 		}
 	}
-	if(type == DbTypeEnum::TYPE_OF_ENTRY_U32)
+	if(type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_U32)
 	{
 		if(valueToCheck <= std::numeric_limits<uint32_t>::max() && valueToCheck >= std::numeric_limits<uint32_t>::min())
 		{
 			isFit = true;
 		}
 	}
-	else if(type == DbTypeEnum::TYPE_OF_ENTRY_S32)
+	else if(type.getRawEnum() == DbTypeEnumRaw::TYPE_OF_ENTRY_S32)
 	{
 		if(valueToCheck <= std::numeric_limits<int32_t>::max() && valueToCheck >= std::numeric_limits<int32_t>::min())
 		{
@@ -276,7 +275,6 @@ bool DbLoader::isFitIntegralType(const int64_t& valueToCheck, const DbTypeEnum& 
 	}
 
 	// No need to check int64_t or uint64_t, because it's meaningless
-
 	return isFit;
 }
 
@@ -291,7 +289,12 @@ std::vector<std::string> DbLoader::tokenize(const std::string& key, const std::s
 	{
 		if(i > startIndex)
 		{
-		tokens.emplace_back(key.substr(startIndex, i - startIndex));
+			std::string newToken = key.substr(startIndex, i - startIndex);
+			newToken.erase(std::remove_if(newToken.begin(), newToken.end(), [](auto& c){
+				return c == ' ' || c == '\t';
+			}), newToken.end());
+
+			tokens.emplace_back(newToken);
 		}
 
 		startIndex = i + delimiter.length();
@@ -310,8 +313,7 @@ std::vector<std::size_t> DbLoader::findMatchingKeys(const std::string& input)
 	auto tokens = tokenize(input, "/");
 	if(tokens.empty())
 	{
-		// ERROR TRACE
-		std::cout << "ERROR: Input " << input << " could not be tokenized!\n";
+		TPT_TRACE(TRACE_ABN, SSTR("Input key ", input, " cannot be tokenized!"));
 		return {};
 	}
 	
@@ -323,8 +325,7 @@ std::vector<std::size_t> DbLoader::findMatchingKeys(const std::string& input)
 		auto it = m_dbDictionary.find(token);
 		if(it == m_dbDictionary.end())
 		{
-			// ERROR TRACE
-			std::cout << "ERROR: Token " << token << " could not be found in m_dbDictionary!\n";
+			TPT_TRACE(TRACE_ABN, SSTR("Token ", token, " could not be found in m_dbDictionary!"));
 			return {};
 		}
 		

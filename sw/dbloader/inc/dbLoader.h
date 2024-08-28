@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include <iostream>
 #include <vector>
 #include <string>
 #include <optional>
@@ -21,6 +20,14 @@
 
 #include "databaseIf.h"
 
+#include <enumUtils.h>
+#include <stringUtils.h>
+#include <traceIf.h>
+#include "dbengine_tpt_provider.h"
+
+using namespace CommonUtils::V1::StringUtils;
+using namespace CommonUtils::V1::EnumUtils;
+
 namespace DbEngine
 {
 namespace DatabaseIf
@@ -28,7 +35,65 @@ namespace DatabaseIf
 namespace V1
 {
 
+enum class DbTypeEnumRaw
+{
+	TYPE_OF_ENTRY_UNDEFINED	= 0,
+	TYPE_OF_ENTRY_U8	= 1,
+	TYPE_OF_ENTRY_S8	= 2,
+	TYPE_OF_ENTRY_U16	= 3,
+	TYPE_OF_ENTRY_S16	= 4,
+	TYPE_OF_ENTRY_U32	= 5,
+	TYPE_OF_ENTRY_S32	= 6,
+	TYPE_OF_ENTRY_U64	= 7,
+	TYPE_OF_ENTRY_S64	= 8,
+	TYPE_OF_ENTRY_CHAR	= 9,
+};
 
+class DbTypeEnum : public EnumType<DbTypeEnumRaw>
+{
+public:
+	explicit DbTypeEnum(const DbTypeEnumRaw& raw) : EnumType<DbTypeEnumRaw>(raw) {}
+	explicit DbTypeEnum() : EnumType<DbTypeEnumRaw>(DbTypeEnumRaw::TYPE_OF_ENTRY_UNDEFINED) {}
+
+	std::string toString() const override
+	{
+		switch (getRawEnum())
+		{
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_UNDEFINED:
+			return "TYPE_OF_ENTRY_UNDEFINED";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_U8:
+			return "TYPE_OF_ENTRY_U8";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_S8:
+			return "TYPE_OF_ENTRY_S8";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_U16:
+			return "TYPE_OF_ENTRY_U16";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_S16:
+			return "TYPE_OF_ENTRY_S16";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_U32:
+			return "TYPE_OF_ENTRY_U32";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_S32:
+			return "TYPE_OF_ENTRY_S32";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_U64:
+			return "TYPE_OF_ENTRY_U64";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_S64:
+			return "TYPE_OF_ENTRY_S64";
+
+		case DbTypeEnumRaw::TYPE_OF_ENTRY_CHAR:
+			return "TYPE_OF_ENTRY_CHAR";
+
+		default:
+			return "Unknown EnumType: " + std::to_string(toS32());
+		}
+	}
+};
 
 class DbLoader
 {
@@ -41,44 +106,40 @@ public:
 	DbLoader& operator=(DbLoader&& other) = delete;
 
 	template<typename T>
-	std::vector<T> retrieveValueByIndex(const std::string& key, IDatabase::ReturnCode& rc)
+	std::vector<T> retrieveValueByIndex(const std::string& key, ReturnCodeEnum& rc)
 	{
-		rc = IDatabase::ReturnCode::OK;
+		rc.set(ReturnCodeRaw::OK);
 
 		auto indices = findMatchingKeys(key);
 		if(indices.empty())
 		{
-			rc = IDatabase::ReturnCode::KEY_NOT_FOUND;
+			TPT_TRACE(TRACE_ABN, SSTR("DB key ", key, " could not be found!"));
+			rc.set(ReturnCodeRaw::KEY_NOT_FOUND);
 			return {};
 		}
 		else if(indices.size() > 1)
 		{
-			// ABN TRACE, found two matching keys, only the first found will be returned
-			std::cout << "ABN: Found two matching keys, only the first found will be returned!" << std::endl;
+			TPT_TRACE(TRACE_ABN, SSTR("Found ", indices.size(), " matching keys (\"", key,"\"): only the first key will be returned which might not be expected!"));
 		}
-
-		// std::cout << "DEBUG: findMatchingKeys has value " << indices.size() << std::endl;
 
 		std::vector<T> values;
 		values.reserve(indices.size());
 
-		DbTypeEnum requestedType { DbTypeEnum::TYPE_OF_ENTRY_UNDEFINED };
-		if(std::is_same<T, uint8_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_U8;
-		else if(std::is_same<T, int8_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_S8;
-		else if(std::is_same<T, uint16_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_U16;
-		else if(std::is_same<T, int16_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_S16;
-		else if(std::is_same<T, uint32_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_U32;
-		else if(std::is_same<T, int32_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_S32;
-		else if(std::is_same<T, uint64_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_U64;
-		else if(std::is_same<T, int64_t>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_S64;
-		else if(std::is_same<T, std::string>::value) requestedType = DbTypeEnum::TYPE_OF_ENTRY_CHAR;
+		DbTypeEnum requestedType;
+		if(std::is_same<T, uint8_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U8);
+		else if(std::is_same<T, int8_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S8);
+		else if(std::is_same<T, uint16_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U16);
+		else if(std::is_same<T, int16_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S16);
+		else if(std::is_same<T, uint32_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U32);
+		else if(std::is_same<T, int32_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S32);
+		else if(std::is_same<T, uint64_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_U64);
+		else if(std::is_same<T, int64_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S64);
+		else if(std::is_same<T, std::string>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_CHAR);
 
-		// std::cout << "DEBUG: key = " << m_dbStorage.at(indices.front()).key << std::endl;
 		if(m_dbStorage.at(indices.front()).type != requestedType)
 		{
-			// ERROR TRACE, requested type mismatch
-			std::cout << "DEBUG: TYPE_MISMATCH!\n";
-			rc = IDatabase::ReturnCode::TYPE_MISMATCH;
+			TPT_TRACE(TRACE_ABN, SSTR("Requested type ", requestedType.toString(), " did not match with DB entry type ", m_dbStorage.at(indices.front()).type.toString()));
+			rc.set(ReturnCodeRaw::TYPE_MISMATCH);
 			return { };
 		}
 
@@ -92,9 +153,7 @@ public:
 				}
 				catch(const std::exception& e)
 				{
-					// ERROR TRACE
-					// std::cerr << e.what() << '\n';
-					std::cout << "DEBUG: exception what: " << e.what() << "\n";
+					TPT_TRACE(TRACE_ABN, SSTR("Could not any_cast DB entry for key ", key, ", type ", requestedType.toString()));
 				}
 			}
 			else
@@ -112,24 +171,10 @@ private:
 	explicit DbLoader(const std::string& binFilePath);
 	virtual ~DbLoader() = default;
 
-	enum class DbTypeEnum
-	{
-		TYPE_OF_ENTRY_UNDEFINED	= 0,
-		TYPE_OF_ENTRY_U8	= 1,
-		TYPE_OF_ENTRY_S8	= 2,
-		TYPE_OF_ENTRY_U16	= 3,
-		TYPE_OF_ENTRY_S16	= 4,
-		TYPE_OF_ENTRY_U32	= 5,
-		TYPE_OF_ENTRY_S32	= 6,
-		TYPE_OF_ENTRY_U64	= 7,
-		TYPE_OF_ENTRY_S64	= 8,
-		TYPE_OF_ENTRY_CHAR	= 9,
-	};
-
 	struct DbEntry
 	{
 		std::string key;
-		DbTypeEnum type { DbTypeEnum::TYPE_OF_ENTRY_UNDEFINED };
+		DbTypeEnum type;
 		std::vector<std::any> values;
 	};
 

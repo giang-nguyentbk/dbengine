@@ -52,12 +52,12 @@ int main()
 	const std::string key6 { "/supportedProtocols" };
 	if(const auto& it = IDatabase::getInstance().autoGet<std::string>(key6); it.has_value())
 	{
-		std::cout << "Reading DB key (" << key6 << ") full: " << it.value() << std::endl;
+		std::cout << "Reading DB key (" << key6 << "), entire string: " << it.value() << std::endl;
 	}
 
 	if(const auto& it = IDatabase::getInstance().autoGetVec<std::string>(key6); it.has_value() && it.value().size())
 	{
-		std::cout << "Reading DB key (" << key6 << "):";
+		std::cout << "Reading DB key (" << key6 << "), split string:";
 		for(const auto& v : it.value())
 		{
 			std::cout << " - " << v;
