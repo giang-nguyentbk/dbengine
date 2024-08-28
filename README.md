@@ -1,4 +1,4 @@
-# textbin-db
+# dbengine
 
 This is a binary database which is loaded into RAM at program runtime. 
 We will implement a project where we will try to compile text file databases to binary databases.

@@ -7,6 +7,8 @@ include Makefile.config
 # Call Makefiles for modules of the project
 # --------------------------------------------------
 include $(SW_DIR)/texttobin/Makefile
+include $(SW_DIR)/dbloader/Makefile
+include $(SW_DIR)/databaseif/Makefile
 
 
 

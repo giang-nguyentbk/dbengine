@@ -12,21 +12,21 @@ BIN_DIR 	:= $(ROOT_DIR)/sw/databaseif/unittest/bin
 CFLAGS 		:= -c -g -Wall -Wextra
 CXX 		:= g++
 
+# INCLUDE_DIR 	:= \
+# 		-I$(ROOT_DIR)/sw/databaseif/if \
+# 		-I$(ROOT_DIR)/sw/databaseif/inc \
+# 		-I$(ROOT_DIR)/sw/dbloader/inc \
+# 		-I$(SDK_INC_DIR)
+
 INCLUDE_DIR 	:= \
-		-I$(ROOT_DIR)/sw/databaseif/if \
-		-I$(ROOT_DIR)/sw/databaseif/inc \
-		-I$(ROOT_DIR)/sw/dbloader/inc \
-		-I$(ROOT_DIR)/sw/common \
 		-I$(SDK_INC_DIR)
 
 MAIN		:= $(ROOT_DIR)/sw/databaseif/unittest/databaseIfTest.cc
-SRC1		:= $(ROOT_DIR)/sw/databaseif/src/databaseImpl.cc
-SRC2		:= $(ROOT_DIR)/sw/dbloader/src/dbLoader.cc
+# SRC1		:= $(ROOT_DIR)/sw/databaseif/src/databaseImpl.cc
+# SRC2		:= $(ROOT_DIR)/sw/dbloader/src/dbLoader.cc
 
 OBJECTS 	=
 OBJECTS 	+= $(BIN_DIR)/databaseIfTest.o
-OBJECTS 	+= $(BIN_DIR)/databaseImpl.o
-OBJECTS 	+= $(BIN_DIR)/dbLoader.o
 
 all: create_bin $(OBJECTS) $(BIN_DIR)/$(TARGET)
 
@@ -37,17 +37,9 @@ $(BIN_DIR)/databaseIfTest.o: $(MAIN)
 	@echo "  CXX \t\t $@"
 	@$(CXX) $(CFLAGS) $^ $(INCLUDE_DIR) -o $@
 
-$(BIN_DIR)/databaseImpl.o: $(SRC1)
-	@echo "  CXX \t\t $@"
-	@$(CXX) $(CFLAGS) $^ $(INCLUDE_DIR) -o $@
-
-$(BIN_DIR)/dbLoader.o: $(SRC2)
-	@echo "  CXX \t\t $@"
-	@$(CXX) $(CFLAGS) $^ $(INCLUDE_DIR) -o $@
-
 $(BIN_DIR)/$(TARGET): $(OBJECTS)
 	@echo "  CXXLD \t $@"
-	@$(CXX) $^ -L$(SDK_LIB_DIR) -ltraceifa -o $@
+	@$(CXX) $^ -L$(SDK_LIB_DIR) -ltraceif -ldatabaseif -o $@
 
 run:
 	@$(BIN_DIR)/$(TARGET)
