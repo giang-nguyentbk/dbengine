@@ -35,11 +35,11 @@ Example: swdb.bin.text
 /* Comment is ignored during scanning byte stream (all bytes in between /* and */ are discarded). */
 /* Because all floating point value should be re-scaled into intergers, MUST write down the resolution and unit for every database record for better understanding */
 /* Data types are only S32, U32, S16, U16, S8, U8, CHAR. Value of each record is treated as a vector of the respective type with at least 1 element. Delimiter is described in details as below. */
-/hw/board_1.12.1/temperatureLevels         		S32	-10, 30, 80, 150
-/hw/board_1.12.1/toleranceLevels         		S16	-10, 30, 80, 150 /* Numeric delimiter is ", " */
-/sw/board_1.41.x/initPatterns              		CHAR	"L P F" /* String delimiter is spaces " " */
-/sw/board_1.23.5/compensatePeriod			U32     0x0FFEC /* We can use hex number for bits/registers/hex related things */
-/sw/board_1.11.x/moduleABC/isFeatureAbcEnabled       	U8    	1
+/hw/board_1.12.1/temperatureLevels         		R	S32	-10, 30, 80, 150
+/hw/board_1.12.1/toleranceLevels         		R	S16	-10, 30, 80, 150 /* Numeric delimiter is ", " */
+/sw/board_1.41.x/initPatterns              		RW	CHAR	"L P F" /* String delimiter is spaces " " */
+/sw/board_1.23.5/compensatePeriod			RW	U32     0x0FFEC /* We can use hex number for bits/registers/hex related things */
+/sw/board_1.11.x/moduleABC/isFeatureAbcEnabled       	RW	U8    	1
 
 3, Next, we will write a helper program which will convert swapp.bin.text file to swapp.bin binary database file. The binary file will look like below.
 Example: swdb.bin
