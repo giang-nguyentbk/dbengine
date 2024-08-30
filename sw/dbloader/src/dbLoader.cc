@@ -565,6 +565,7 @@ std::vector<std::string> DbLoader::tokenize(const std::string& key, const std::s
 
 std::vector<std::size_t> DbLoader::findMatchingKeys(const std::string& input, const DatabaseDictionary& dbDictionary, std::mutex& mtx)
 {
+	std::scoped_lock<std::mutex> lockDictionary(mtx);
 	if(dbDictionary.empty())
 	{
 		// TPT_TRACE(TRACE_ABN, SSTR("The DB Dictionary is empty!"));
@@ -580,7 +581,6 @@ std::vector<std::size_t> DbLoader::findMatchingKeys(const std::string& input, co
 
 	std::unordered_set<std::size_t> intersect;
 	std::unordered_set<std::size_t> tmp;
-	std::scoped_lock<std::mutex> lockDictionary(mtx);
 	for(const auto& token : tokens)
 	{
 		auto it = dbDictionary.find(token);
@@ -915,6 +915,27 @@ uint16_t DbLoader::getCRC16(uint8_t *startAddr, uint32_t numberBytes)
 	}
 
 	return (tmp ^ 0xFFFF) & 0xFFFF;
+}
+
+bool DbLoader::checkIfWritable(const std::size_t& index, const bool& isFoundInModDb)
+{
+	DatabaseStorage& dbStorage = isFoundInModDb ? m_modDbStorage : m_dbStorage;
+	std::mutex& mtx = isFoundInModDb ? m_modStorageMutex : m_storageMutex;
+
+	std::scoped_lock<std::mutex> lockStorage(mtx);
+	auto rc = dbStorage.at(index).permission;
+	if(rc.getRawEnum() == DbPermissionEnumRaw::PERM_READ_ONLY)
+	{
+		TPT_TRACE(TRACE_ABN, SSTR("DB key ", dbStorage.at(index).key, " has Read-Only permission!"));
+		return false;
+	}
+	else if(rc.getRawEnum() == DbPermissionEnumRaw::PERM_READ_WRITE)
+	{
+		return true;
+	}
+	
+	TPT_TRACE(TRACE_ABN, SSTR("DB key ", dbStorage.at(index).key, " has Unknown permission!"));
+	return false;
 }
 
 } // namespace V1

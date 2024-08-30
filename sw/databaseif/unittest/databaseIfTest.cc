@@ -87,5 +87,11 @@ int main()
 	// 	std::cout << "Reading DB key (" << key3 << "): " << it.value() << std::endl;
 	// }
 
+	std::vector<int16_t> vkey5 {-1, 1, 1, -1};
+	if(IDatabase::getInstance().update(key5, vkey5, false).getRawEnum() == ReturnCodeRaw::OK)
+	{
+		std::cout << "Soft writing DB key (" << key5 << ") successfully!\n";
+	}
+
 	return 0;
 }

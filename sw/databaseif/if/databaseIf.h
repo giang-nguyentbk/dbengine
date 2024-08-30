@@ -29,6 +29,7 @@ enum class ReturnCodeRaw
 	OK,
 	KEY_NOT_FOUND,
 	TYPE_MISMATCH,
+	NOT_WRITABLE,
 	UNDEFINED
 };
 
@@ -50,6 +51,9 @@ public:
 
 		case ReturnCodeRaw::TYPE_MISMATCH:
 			return "TYPE_MISMATCH";
+		
+		case ReturnCodeRaw::NOT_WRITABLE:
+			return "NOT_WRITABLE";
 
 		case ReturnCodeRaw::UNDEFINED:
 			return "UNDEFINED";

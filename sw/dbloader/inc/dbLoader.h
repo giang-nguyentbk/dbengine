@@ -153,7 +153,7 @@ public:
 		const auto& [index, isFoundInModDb] = it.value();
 
 		DbTypeEnum requestedType;
-		if(rc = validateDbEntry<T>(index, isFoundInModDb, requestedType); rc.getRawEnum() == ReturnCodeRaw::OK)
+		if(rc = checkIfErasedOrCorrectType<T>(index, isFoundInModDb, requestedType); rc.getRawEnum() == ReturnCodeRaw::OK)
 		{
 			return getEntryValues<T>(index, isFoundInModDb, requestedType);
 		}
@@ -165,18 +165,17 @@ public:
 	ReturnCodeEnum update(const std::string& key, std::vector<T>& values, bool isHardWrite)
 	{
 		const auto& it = findMatchingIndices(key);
-		if(!it.has_value())
-		{
-			return ReturnCodeEnum(ReturnCodeRaw::KEY_NOT_FOUND);
-		}
+		if(!it.has_value()) return ReturnCodeEnum(ReturnCodeRaw::KEY_NOT_FOUND);
 
 		const auto& [index, isFoundInModDb] = it.value();
 
+		if(!checkIfWritable(index, isFoundInModDb)) return ReturnCodeEnum(ReturnCodeRaw::NOT_WRITABLE);
+
 		DbTypeEnum requestedType;
-		if(validateDbEntry<T>(index, isFoundInModDb, requestedType).getRawEnum() == ReturnCodeRaw::KEY_NOT_FOUND)
+		if(auto rc = checkIfErasedOrCorrectType<T>(index, isFoundInModDb, requestedType); rc.getRawEnum() != ReturnCodeRaw::OK)
 		{
 			// Meaning entry already erased!
-			return ReturnCodeEnum(ReturnCodeRaw::KEY_NOT_FOUND);
+			return rc;
 		}
 
 		updateDbEntry<T>(index, isFoundInModDb, values, requestedType);
@@ -184,7 +183,7 @@ public:
 		if(isHardWrite)
 		{
 			// Edit and overwrite swdb-hardsave.bin file with new entry's value to keep it persistent over restarts.
-			// Note that: updateDbEntry() first is needed
+			// Note that: updateDbEntry() must be called before updateHardSavedDb()
 			updateHardSavedDb(index, isFoundInModDb);
 		}
 
@@ -270,13 +269,19 @@ private:
 	std::vector<std::size_t> findMatchingKeys(const std::string& input, const DatabaseDictionary& dbDictionary, std::mutex& mtx);
 	bool isFitIntegralType(const int64_t& valueToCheck, const DbTypeEnum& type);
 	std::optional<std::pair<std::size_t, bool>> findMatchingIndices(const std::string& input);
+	bool checkIfWritable(const std::size_t& index, const bool& isFoundInModDb);
+	void updateHardSavedDb(const std::size_t& index, const bool& isFoundInModDb);
+	void initHardSavedDbFile();
+	uint16_t getCRC16(uint8_t *startAddr, uint32_t numberBytes);
+	uint32_t lookupCRC16Table(uint32_t initCRC, uint8_t data);
 
 	template<typename T>
-	ReturnCodeEnum validateDbEntry(const std::size_t& index, const bool& isFoundInModDb, DbTypeEnum& requestedType)
+	ReturnCodeEnum checkIfErasedOrCorrectType(const std::size_t& index, const bool& isFoundInModDb, DbTypeEnum& requestedType)
 	{
 		DatabaseStorage& dbStorage = isFoundInModDb ? m_modDbStorage : m_dbStorage;
 		std::mutex& mtx = isFoundInModDb ? m_modStorageMutex : m_storageMutex;
 
+		std::scoped_lock<std::mutex> lockStorage(mtx);
 		if(dbStorage.at(index).status.isErased)
 		{
 			TPT_TRACE(TRACE_ABN, SSTR("DB key ", dbStorage.at(index).key, " was already erased!"));
@@ -293,7 +298,6 @@ private:
 		else if(std::is_same<T, int64_t>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_S64);
 		else if(std::is_same<T, std::string>::value) requestedType.set(DbTypeEnumRaw::TYPE_OF_ENTRY_CHAR);
 
-		std::scoped_lock<std::mutex> lockStorage(mtx);
 		if(dbStorage.at(index).type != requestedType)
 		{
 			TPT_TRACE(TRACE_ABN, SSTR("Requested type ", requestedType.toString(), " did not match with DB entry type ", dbStorage.at(index).type.toString()));
@@ -403,12 +407,6 @@ private:
 			TPT_TRACE(TRACE_INFO, SSTR("Added entry ", copiedEntry.key, " into Modified DB successfully!"));
 		}
 	}
-
-	void updateHardSavedDb(const std::size_t& index, const bool& isFoundInModDb);
-	void initHardSavedDbFile();
-
-	uint16_t getCRC16(uint8_t *startAddr, uint32_t numberBytes);
-	uint32_t lookupCRC16Table(uint32_t initCRC, uint8_t data);
 
 }; // class DbLoader
 
