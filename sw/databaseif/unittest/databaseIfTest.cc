@@ -132,14 +132,14 @@ int main()
 		std::cout << "[DEBUG]: Reading DB key (" << key3 << "): " << it.value() << std::endl;
 	}
 
-	std::cout << "[DEBUG]: Restoring uint16_t DB key " << key3 << std::endl;
-	IDatabase::getInstance().restore(key3);
+	// std::cout << "[DEBUG]: Restoring uint16_t DB key " << key3 << std::endl;
+	// IDatabase::getInstance().restore(key3);
 
-	std::cout << "[DEBUG]: Reading uint16_t DB key " << key3 << std::endl;
-	if(const auto& it = IDatabase::getInstance().autoGet<uint16_t>(key3); it.has_value())
-	{
-		std::cout << "[DEBUG]: Reading DB key (" << key3 << "): " << it.value() << std::endl;
-	}
+	// std::cout << "[DEBUG]: Reading uint16_t DB key " << key3 << std::endl;
+	// if(const auto& it = IDatabase::getInstance().autoGet<uint16_t>(key3); it.has_value())
+	// {
+	// 	std::cout << "[DEBUG]: Reading DB key (" << key3 << "): " << it.value() << std::endl;
+	// }
 
 
 	return 0;

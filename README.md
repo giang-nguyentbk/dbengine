@@ -71,6 +71,10 @@ Example: swdb.bin
 + databaseif:
 	- Define database interfaces (maybe template class or visitor,...) to get value of a given matching key.
 
+5. TODO
++ Apply binary encryption using RSA, AES,...
++ Add one more field (maybe 1 byte) after DB Revision, to check if it's encrypted or not.
+
 ```
 
 ![](./assets/dbengine-test.png?raw=true)

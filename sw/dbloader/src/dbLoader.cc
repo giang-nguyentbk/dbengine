@@ -847,6 +847,9 @@ void DbLoader::updateHardSavedDb(const std::size_t& index)
 				newContent.emplace_back(',');
 				newContent.emplace_back(' ');
 			}
+
+			newContent.pop_back(); // Remove redundant last ", " 
+			newContent.pop_back();
 		}
 		newContent.emplace_back('\0');
 
@@ -1092,6 +1095,7 @@ void DbLoader::restoreHardSavedDb(const std::size_t& index)
 
 			if(key == updatedEntry.key)
 			{
+				newContent.pop_back(); // Pop back 'F'
 				// Found the entry which should be updated
 				// By pass "value" in inputFile, write our own one
 				while((c = inputFile.get()) != '\0') {}
