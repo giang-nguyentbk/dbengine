@@ -175,13 +175,13 @@ public:
 		if(!checkIfCorrectType<T>(index, isFoundInModDb, requestedType)) return ReturnCodeEnum(ReturnCodeRaw::TYPE_MISMATCH);
 		else if(checkIfErased(index, isFoundInModDb)) return ReturnCodeEnum(ReturnCodeRaw::KEY_NOT_FOUND);
 
-		auto indexInModDb = updateDbEntry<T>(index, isFoundInModDb, values, requestedType);
+		auto updatedIndex = updateDbEntry<T>(index, isFoundInModDb, values, requestedType);
 
 		if(isHardWrite)
 		{
 			// Edit and overwrite swdb-hardsave.bin file with new entry's value to keep it persistent over restarts.
 			// Note that: updateDbEntry() must be called before updateHardSavedDb()
-			updateHardSavedDb(indexInModDb);
+			updateHardSavedDb(updatedIndex);
 		}
 
 		return ReturnCodeEnum(ReturnCodeRaw::OK);

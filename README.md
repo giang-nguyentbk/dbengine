@@ -77,4 +77,6 @@ Example: swdb.bin
 
 ```
 
-![](./assets/dbengine-test.png?raw=true)
+![](./assets/dbengine-test.png)
+
+![](./assets/dbengine-binary.png)
