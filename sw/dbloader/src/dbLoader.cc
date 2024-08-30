@@ -461,8 +461,8 @@ bool DbLoader::loadHardSavedDb(const std::string& binFilePath)
 				}
 			}
 
-			std::scoped_lock<std::mutex> lockStorage(m_modStorageMutex);
-			std::scoped_lock<std::mutex> lockDictionary(m_modDictionaryMutex);
+			std::scoped_lock<std::mutex> lockModStorage(m_modStorageMutex);
+			std::scoped_lock<std::mutex> lockModDictionary(m_modDictionaryMutex);
 			m_modDbStorage.emplace_back(newEntry);
 
 			// Tokenize the key into sub-keys, convenient for searching later (technique: Inverted Index - Hashing Dictionary)
@@ -611,7 +611,7 @@ std::optional<std::pair<std::size_t, bool>> DbLoader::findMatchingIndices(const 
 	auto indices = findMatchingKeys(input, m_modDbDictionary, m_modDictionaryMutex);
 	if(indices.empty())
 	{
-		TPT_TRACE(TRACE_INFO, SSTR("DB key ", input, " could not be found in Modified DB, try on Original DB!"));
+		// TPT_TRACE(TRACE_INFO, SSTR("DB key ", input, " could not be found in Modified DB, try on Original DB!"));
 		indices = findMatchingKeys(input, m_dbDictionary, m_dictionaryMutex);
 		if(indices.empty())
 		{
@@ -634,29 +634,20 @@ std::optional<std::pair<std::size_t, bool>> DbLoader::findMatchingIndices(const 
 	return std::make_pair(indices.front(), true);
 }
 
-void DbLoader::updateHardSavedDb(const std::size_t& index, const bool& isFoundInModDb)
+void DbLoader::updateHardSavedDb(const std::size_t& index)
 {
-	static bool firstTime = false;
-	if(!firstTime)
+	if(!isHardSavedDbFileInit)
 	{
-		firstTime = true;
+		isHardSavedDbFileInit = true;
 		initHardSavedDbFile();
 	}
 
-	if(!isFoundInModDb)
-	{
-		TPT_TRACE(TRACE_ABN, SSTR("The updated DB entry should be already available in Modified DB!"));
-	}
-
-	std::mutex& mtx = isFoundInModDb ? m_modStorageMutex : m_storageMutex;
-	DatabaseStorage& dbStorage = isFoundInModDb ? m_modDbStorage : m_dbStorage;
+	std::mutex& mtx = m_modStorageMutex;
+	DatabaseStorage& dbStorage = m_modDbStorage;
 
 	std::scoped_lock<std::mutex> lockStorage(mtx);
 	const auto& updatedEntry = dbStorage.at(index);
 
-	// TODO: in case cannot open input hard save file (need to initially construct it for the first time)
-	// TODO: implement permission when update()
-	// TODO: implement restore() and erase()
 	std::ifstream inputFile(m_binDbPath + "/swdb-hardsave.bin", std::ifstream::binary);
 	if(!inputFile.is_open())
 	{
@@ -769,6 +760,7 @@ void DbLoader::updateHardSavedDb(const std::size_t& index, const bool& isFoundIn
 					newContent.pop_back(); // Remove redundant of the last ", "
 					newContent.pop_back();
 				}
+				newContent.emplace_back('\0');
 				found = true;
 				break;
 			}
@@ -779,9 +771,8 @@ void DbLoader::updateHardSavedDb(const std::size_t& index, const bool& isFoundIn
 				{
 					newContent.emplace_back(c);
 				}
-				
+				newContent.emplace_back('\0');
 			}
-			newContent.emplace_back('\0');
 		}
 	}
 
@@ -936,6 +927,225 @@ bool DbLoader::checkIfWritable(const std::size_t& index, const bool& isFoundInMo
 	
 	TPT_TRACE(TRACE_ABN, SSTR("DB key ", dbStorage.at(index).key, " has Unknown permission!"));
 	return false;
+}
+
+ReturnCodeEnum DbLoader::resetToDefault()
+{
+	std::scoped_lock<std::mutex> lockStorage(m_modStorageMutex);
+	m_modDbStorage.clear();
+	std::scoped_lock<std::mutex> lockDictionary(m_modDictionaryMutex);
+	m_modDbDictionary.clear();
+
+	std::remove(std::string(m_binDbPath + "/swdb-hardsave.bin").c_str());
+	initHardSavedDbFile();
+	isHardSavedDbFileInit = true;
+
+	TPT_TRACE(TRACE_INFO, SSTR("Database settings reset to default successfully!"));
+	return ReturnCodeEnum(ReturnCodeRaw::OK);
+}
+
+bool DbLoader::checkIfErased(const std::size_t& index, const bool& isFoundInModDb)
+{
+	DatabaseStorage& dbStorage = isFoundInModDb ? m_modDbStorage : m_dbStorage;
+	std::mutex& mtx = isFoundInModDb ? m_modStorageMutex : m_storageMutex;
+
+	std::scoped_lock<std::mutex> lockStorage(mtx);
+	if(dbStorage.at(index).status.isErased)
+	{
+		TPT_TRACE(TRACE_ABN, SSTR("DB key ", dbStorage.at(index).key, " was already erased!"));
+		return true;
+	}
+
+	return false;
+}
+
+std::size_t DbLoader::eraseDbEntry(const std::size_t& index, const bool& isFoundInModDb)
+{
+	std::scoped_lock<std::mutex> lockStorage(m_modStorageMutex);
+	if(isFoundInModDb)
+	{
+		// Mark entry status as Erased
+		m_modDbStorage.at(index).status.isErased = true;
+		TPT_TRACE(TRACE_INFO, SSTR("Erased entry ", m_modDbStorage.at(index).key, " in Modified DB successfully!"));
+		return index;
+	}
+	else
+	{
+		// Add new entry with erased status into Modified DB. Do not change anything in Original DB
+		std::scoped_lock<std::mutex> lockStorage(m_storageMutex);
+		std::scoped_lock<std::mutex> lockModDictionary(m_modDictionaryMutex);
+		auto copiedEntry = m_dbStorage.at(index);
+		copiedEntry.status.isErased = true;
+		m_modDbStorage.emplace_back(copiedEntry);
+
+		std::vector<std::string> subKeys = tokenize(copiedEntry.key, "/");
+		for(const auto& sk : subKeys)
+		{
+			m_modDbDictionary[sk].insert(m_modDbStorage.size() - 1); // Storing the index of entry in m_dbStorage vector
+		}
+
+		TPT_TRACE(TRACE_INFO, SSTR("Added erased entry ", copiedEntry.key, " into Modified DB successfully!"));
+		return m_modDbStorage.size() - 1;
+	}
+}
+
+ReturnCodeEnum DbLoader::erase(const std::string& key)
+{
+	const auto& it = findMatchingIndices(key);
+	if(!it.has_value()) return ReturnCodeEnum(ReturnCodeRaw::KEY_NOT_FOUND);
+
+	const auto& [index, isFoundInModDb] = it.value();
+
+	if(!checkIfErased(index, isFoundInModDb))
+	{
+		(void)eraseDbEntry(index, isFoundInModDb);
+	}
+
+	return ReturnCodeEnum(ReturnCodeRaw::OK);
+}
+
+ReturnCodeEnum DbLoader::restore(const std::string& key)
+{
+	auto indices = findMatchingKeys(key, m_modDbDictionary, m_modDictionaryMutex);
+	if(indices.empty())
+	{
+		TPT_TRACE(TRACE_ABN, SSTR("No DB entry with key ", key, " need to restore!"));
+		return ReturnCodeEnum(ReturnCodeRaw::KEY_NOT_FOUND);
+	}
+
+	// Restore all entry found in Modified DB
+	for(const auto& index : indices)
+	{
+		restoreHardSavedDb(index);
+
+		std::scoped_lock<std::mutex> lockModStorage(m_modStorageMutex);
+		std::scoped_lock<std::mutex> lockModDictionary(m_modDictionaryMutex);
+		std::vector<std::string> subKeys = tokenize(m_modDbStorage.at(index).key, "/");
+		for(const auto& sk : subKeys)
+		{
+			m_modDbDictionary[sk].erase(index);
+		}
+
+		TPT_TRACE(TRACE_INFO, SSTR("Restored DB key ", m_modDbStorage.at(index).key, " successfully!"));
+		m_modDbStorage.erase(m_modDbStorage.begin() + index);
+	}
+
+	return ReturnCodeEnum(ReturnCodeRaw::OK);
+}
+
+void DbLoader::restoreHardSavedDb(const std::size_t& index)
+{
+	if(!isHardSavedDbFileInit)
+	{
+		isHardSavedDbFileInit = true;
+		initHardSavedDbFile();
+	}
+
+	std::mutex& mtx = m_modStorageMutex;
+	DatabaseStorage& dbStorage = m_modDbStorage;
+
+	std::scoped_lock<std::mutex> lockStorage(mtx);
+	const auto& updatedEntry = dbStorage.at(index);
+
+	std::ifstream inputFile(m_binDbPath + "/swdb-hardsave.bin", std::ifstream::binary);
+	if(!inputFile.is_open())
+	{
+		TPT_TRACE(TRACE_ABN, SSTR("Could not open DB binary file ", m_binDbPath, "/swdb-hardsave.bin"));
+		return;
+	}
+
+	std::ofstream outputFile(m_binDbPath + "/swdb-hardsave.tmp.bin", std::ios_base::binary);
+	if(!outputFile.is_open())
+	{
+		TPT_TRACE(TRACE_ABN, SSTR("Could not open DB binary file ", m_binDbPath, "/swdb-hardsave.tmp.bin"));
+		inputFile.close();
+		return;
+	}
+
+	std::vector<char> newContent;
+	newContent.reserve(2048); // Currently hardcoded
+
+	// Read 4 bytes of total number bytes of DB entries (payload)
+	uint8_t buff[4];
+	for(int i = 0; i < 4; ++i)
+	{
+		buff[i] = inputFile.get();
+		newContent.emplace_back((char)buff[i]);
+	}
+	uint32_t totalEntries = be32toh(*(uint32_t *)buff);
+
+	// Analyze DB entries
+	char c;
+	bool found = false;
+	for(auto i = 0u; i < totalEntries; ++i)
+	{
+		c = inputFile.get();
+		newContent.emplace_back(c);
+		if(c == 'F')
+		{
+			std::string key;
+			// Read the "key" in null-terminated string format
+			while((c = inputFile.get()) != '\0')
+			{
+				key += c;
+			}
+
+			if(key == updatedEntry.key)
+			{
+				// Found the entry which should be updated
+				// By pass "value" in inputFile, write our own one
+				while((c = inputFile.get()) != '\0') {}
+
+				found = true;
+				break;
+			}
+			else
+			{
+				for(const auto ch : key)
+				{
+					newContent.emplace_back(ch);
+				}
+				newContent.emplace_back('\0');
+
+				// Copy the next 2 bytes for permission and type
+				for(int j = 0; j < 2; ++j)
+				{
+					newContent.emplace_back(inputFile.get());
+				}
+
+				// Copy "value" in inputFile into outputFile
+				while((c = inputFile.get()) != '\0')
+				{
+					newContent.emplace_back(c);
+				}
+				
+			}
+			newContent.emplace_back('\0');
+		}
+	}
+
+	if(found)
+	{
+		// Decrease total number of entries by one
+		totalEntries = htobe32(--totalEntries);
+		for(int j = 0; j < 4; ++j)
+		{
+			newContent.at(j) = *((char *)(&totalEntries) + j);
+		}
+	}
+
+	while((c = inputFile.get()) != EOF)
+	{
+		newContent.emplace_back(c);
+	}
+
+	outputFile.write(newContent.data(), newContent.size());
+
+	inputFile.close();
+	outputFile.close();
+
+	std::remove(std::string(m_binDbPath + "/swdb-hardsave.bin").c_str());
+	std::rename(std::string(m_binDbPath + "/swdb-hardsave.tmp.bin").c_str(), std::string(m_binDbPath + "/swdb-hardsave.bin").c_str());
 }
 
 } // namespace V1

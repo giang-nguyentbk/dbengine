@@ -98,14 +98,14 @@ public:
 	virtual ReturnCodeEnum update(const std::string& key, std::vector<int64_t>& values, bool isHardWrite) const = 0;
 	virtual ReturnCodeEnum update(const std::string& key, std::vector<std::string>& values, bool isHardWrite) const = 0;
 
-	// Restore a specific key using back to original DB
-	// virtual ReturnCodeEnum restore(const std::string& key) const = 0;
+	// Restore a specific key back to original DB even if it's been erased or modified
+	virtual ReturnCodeEnum restore(const std::string& key) const = 0;
 
 	// Make everything back to original DB
-	// virtual ReturnCodeEnum default() const = 0;
+	virtual ReturnCodeEnum reset() const = 0;
 
 	// Mark a specific key as deleted
-	// virtual ReturnCodeEnum erase(const std::string& key, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum erase(const std::string& key) const = 0;
 
 	template<typename T>
 	std::optional<std::vector<T>> autoGetVec(const std::string& key) noexcept

@@ -131,6 +131,20 @@ ReturnCodeEnum DatabaseImpl::update(const std::string& key, std::vector<std::str
 	return DbLoader::getInstance().update<std::string>(key, values, isHardWrite);
 }
 
+ReturnCodeEnum DatabaseImpl::restore(const std::string& key) const
+{
+	return DbLoader::getInstance().restore(key);
+}
+
+ReturnCodeEnum DatabaseImpl::reset() const
+{
+	return DbLoader::getInstance().resetToDefault();
+}
+
+ReturnCodeEnum DatabaseImpl::erase(const std::string& key) const
+{
+	return DbLoader::getInstance().erase(key);
+}
 
 } // namespace V1
 

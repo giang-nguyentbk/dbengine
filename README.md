@@ -1,9 +1,11 @@
 # dbengine
-
+```
 This is a binary database which is loaded into RAM at program runtime. 
 We will implement a project where we will try to compile text file databases to binary databases.
 This binary database will be loaded to program's RAM at startup. There are some way to encrypt binary database for more security.
+```
 
+```
 1. There are text database files which contain only two things below:
 	+ Comment sections: must start with /* and end with */
 	+ DB entries: must be formed like this: key	type	value
@@ -68,3 +70,7 @@ Example: swdb.bin
 
 + databaseif:
 	- Define database interfaces (maybe template class or visitor,...) to get value of a given matching key.
+
+```
+
+![](./assets/dbengine-test.png?raw=true)

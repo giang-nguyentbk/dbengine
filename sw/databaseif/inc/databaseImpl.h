@@ -53,9 +53,11 @@ public:
 	ReturnCodeEnum update(const std::string& key, std::vector<int64_t>& values, bool isHardWrite) const override;
 	ReturnCodeEnum update(const std::string& key, std::vector<std::string>& values, bool isHardWrite) const override;
 
-	// ReturnCodeEnum restore(const std::string& key) const override;
+	ReturnCodeEnum restore(const std::string& key) const override;
 
-	// ReturnCodeEnum erase(const std::string& key, bool isHardWrite) const override;
+	ReturnCodeEnum reset() const override;
+
+	ReturnCodeEnum erase(const std::string& key) const override;
 
 
 private:
