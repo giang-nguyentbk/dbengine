@@ -1,11 +1,11 @@
 /* ---------------------------------------------------- DEVICE123 - PROD_1.14.12 ---------------------------------------------------- */
 /* ---------------------------------------------------- MODULE ABC - FEATURE XYZ ---------------------------------------------------- */
-/sw/prod_1.14.12/isFeatureXyzEnabled			U8	1
+/sw/prod_1.14.12/isFeatureXyzEnabled			RW	U8	1
 
 /* ------------------------------- Temperature ------------------------------- */
 /* Resolution: 0.1 Celsius degree                                              */
-/hw/prod_1.14.12/sensor/ad51x2/temperatureRanges	S16	-100, 205, 1100, 155
-/hw/prod_1.14.12/sensor/ad51x2/driverName		CHAR	"tempSensorDcDc:v1.0.1"
+/hw/prod_1.14.12/sensor/ad51x2/temperatureRanges	R	S16	-100, 205, 1100, 155
+/hw/prod_1.14.12/sensor/ad51x2/driverName		R	CHAR	"tempSensorDcDc:v1.0.1"
 
 /* -------------------------- Supported Capabilites -------------------------- */
 /* Bit Mask:                                         			       */
@@ -13,7 +13,7 @@
 /* 	+ Overpower  mode:	0b0000 0000 0000 0010			       */
 /* 	+ Full power mode:	0b0000 0000 0000 0100			       */
 /* 	+ Power save mode:	0b0000 0000 0000 1000			       */
-/sw/prod_1.14.12/supportedCapabilities			U16	0xE
+/sw/prod_1.14.12/supportedCapabilities			RW	U16	0xE
 
 /* --------------------------- Supported Protocols --------------------------- */
-/hw/prod_1.14.12/supportedProtocols			CHAR	"SPI I2C UART"
+/hw/prod_1.14.12/supportedProtocols			RW	CHAR	"SPI I2C UART"

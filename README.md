@@ -47,9 +47,10 @@ Example: swdb.bin
 + The second byte is databaseRevision dbRev
 + The next 4 bytes are reserved additional parameters for dbRev
 + The next 4 bytes are the number bytes of actual database payload, length of the entire payload
-+ The next are consecutive dbEntries with format: F<key>'\0'<type><value>'\0'
++ The next are consecutive dbEntries with format: F<key>'\0'<permission><type><value>'\0'
 	- F is the start signature of each dbEntry.
 	- <key> is the string "key" as above, note that it includes string termination character '\0' as well.
+	- <permission> is 1 byte to indicate "permission" for each entry (0 -> Read only,, 1 -> Read Write).
 	- <type> is 1 byte to indicate TypeOfEntry_e.
 	- <value> is the string of "value", note that it includes string null termination "\0" as well. For example, for numeric types "value" will be a string of "5, 10, 15, 20" while for char type "value" will be a string of ""L P F"" (be careful about two additional double-quote characters)
 + After all dbEntries, that means end of payload, there must be an byte 'E' indicate end of payload.

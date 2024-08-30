@@ -65,5 +65,27 @@ int main()
 		std::cout << std::endl;
 	}
 
+	std::vector<uint8_t> vkey1 {0};
+	if(IDatabase::getInstance().update(key1, vkey1, false).getRawEnum() == ReturnCodeRaw::OK)
+	{
+		std::cout << "Soft writing DB key (" << key1 << ") successfully!\n";
+	}
+
+	if(const auto& it = IDatabase::getInstance().autoGet<uint8_t>(key1); it.has_value())
+	{
+		std::cout << "Reading DB key (" << key1 << "): " << +it.value() << std::endl;
+	}
+
+	// std::vector<uint16_t> vkey3 {3};
+	// if(IDatabase::getInstance().update(key3, vkey3, true).getRawEnum() == ReturnCodeRaw::OK)
+	// {
+	// 	std::cout << "Hard writing DB key (" << key3 << ") successfully!\n";
+	// }
+
+	// if(const auto& it = IDatabase::getInstance().autoGet<uint16_t>(key3); it.has_value())
+	// {
+	// 	std::cout << "Reading DB key (" << key3 << "): " << it.value() << std::endl;
+	// }
+
 	return 0;
 }

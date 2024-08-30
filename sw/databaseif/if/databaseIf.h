@@ -80,6 +80,29 @@ public:
 	virtual ReturnCodeEnum get(const std::string& key, std::vector<int64_t>& values) const = 0;
 	virtual ReturnCodeEnum get(const std::string& key, std::vector<std::string>& values) const = 0;
 
+	// isHardWrite: a hard write into database meaning the modified value will be persistent even after software/hardware restarted
+	// A hard write entry can be only restored by calling restore() overloads below
+	// On another hand, a soft write entry can only exist in the current running session, when program or device restarted it's automatically restored.
+	// A soft write entry can also be restored by calling restore()
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<uint8_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<int8_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<uint16_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<int16_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<uint32_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<int32_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<uint64_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<int64_t>& values, bool isHardWrite) const = 0;
+	virtual ReturnCodeEnum update(const std::string& key, std::vector<std::string>& values, bool isHardWrite) const = 0;
+
+	// Restore a specific key using back to original DB
+	// virtual ReturnCodeEnum restore(const std::string& key) const = 0;
+
+	// Make everything back to original DB
+	// virtual ReturnCodeEnum default() const = 0;
+
+	// Mark a specific key as deleted
+	// virtual ReturnCodeEnum erase(const std::string& key, bool isHardWrite) const = 0;
+
 	template<typename T>
 	std::optional<std::vector<T>> autoGetVec(const std::string& key) noexcept
 	{

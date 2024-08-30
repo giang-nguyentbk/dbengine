@@ -43,6 +43,20 @@ public:
 	ReturnCodeEnum get(const std::string& key, std::vector<int64_t>& values) const override;
 	ReturnCodeEnum get(const std::string& key, std::vector<std::string>& values) const override;
 
+	ReturnCodeEnum update(const std::string& key, std::vector<uint8_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<int8_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<uint16_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<int16_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<uint32_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<int32_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<uint64_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<int64_t>& values, bool isHardWrite) const override;
+	ReturnCodeEnum update(const std::string& key, std::vector<std::string>& values, bool isHardWrite) const override;
+
+	// ReturnCodeEnum restore(const std::string& key) const override;
+
+	// ReturnCodeEnum erase(const std::string& key, bool isHardWrite) const override;
+
 
 private:
 	DatabaseImpl() = default;

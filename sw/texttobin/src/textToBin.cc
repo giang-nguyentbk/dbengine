@@ -56,9 +56,17 @@ enum class DbTypeEnum
 	TYPE_OF_ENTRY_CHAR	= 9,
 };
 
+enum class DbPermissionEnum
+{
+	PERM_UNDEFINED = 0,
+	PERM_READ_ONLY = 1,
+	PERM_READ_WRITE = 2
+};
+
 struct DbEntry
 {
 	std::string key;
+	std::string permission;
 	std::string type;
 	std::string value;
 };
@@ -66,7 +74,6 @@ struct DbEntry
 void constructBinaryFile(const std::vector<char>& payload, std::ofstream& binFile);
 uint32_t lookupCRC16Table(uint32_t initCRC, uint8_t data);
 uint16_t getCRC16(uint8_t *startAddr, uint32_t numberBytes);
-bool isBigEndian();
 bool tokenize(const char*& p, std::string& token, uint8_t index);
 std::vector<char> generatePayload(const std::vector<std::string>& entries);
 std::vector<std::string> convertDBEntries(std::ifstream& txtFile);
@@ -199,7 +206,7 @@ std::vector<std::string> convertDBEntries(std::ifstream& txtFile)
 		// std::cout << "entry: " << entry << std::endl;
 	}
 
-	if(entry.length() > 7) // At least 2 characters for key, 2 for type, 1 for value and 2 for space between the threes
+	if(entry.length() > 9) // At least 2 characters for key, 1 for permission, 2 for type, 1 for value and 3 for space between the threes
 	{
 		entryVec.push_back(entry);
 	}
@@ -220,15 +227,22 @@ std::vector<char> generatePayload(const std::vector<std::string>& entries)
 		while(tokenize(p, token, index))
 		{
 			if(index == 0) entry.key = token;
-			else if(index == 1) entry.type = token;
-			else if(index == 2) entry.value = token;
+			else if(index == 1) entry.permission = token;
+			else if(index == 2) entry.type = token;
+			else if(index == 3) entry.value = token;
 
-			if(++index > 2) break;
+			if(++index > 3) break;
 		}
 
 		payload.push_back('F');
+
 		for(const auto& c : entry.key) payload.push_back(c);
 		payload.push_back('\0');
+
+		if(entry.permission == "R") payload.push_back(static_cast<char>(DbPermissionEnum::PERM_READ_ONLY));
+		else if(entry.permission == "RW") payload.push_back(static_cast<char>(DbPermissionEnum::PERM_READ_WRITE));
+		else payload.push_back(static_cast<char>(DbPermissionEnum::PERM_UNDEFINED));
+
 		if(entry.type == "U8") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U8));
 		else if(entry.type == "S8") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S8));
 		else if(entry.type == "U16") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U16));
@@ -238,11 +252,8 @@ std::vector<char> generatePayload(const std::vector<std::string>& entries)
 		else if(entry.type == "U64") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_U64));
 		else if(entry.type == "S64") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_S64));
 		else if(entry.type == "CHAR") payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_CHAR));
-		else
-		{
-			std::cout << "ERROR: Unknown DB entry type = " << entry.type << std::endl;
-			break;
-		}
+		else payload.push_back(static_cast<char>(DbTypeEnum::TYPE_OF_ENTRY_UNDEFINED));
+
 		// std::cout << "entry.value: " << entry.value << ", length: " << entry.value.length() << std::endl;
 		for(const auto& c : entry.value) payload.push_back(c);
 		payload.push_back('\0');
@@ -262,7 +273,7 @@ bool tokenize(const char*& p, std::string& token, uint8_t index)
 	/* Or token is an actual argument */
 	char prev = '.';
 	token.clear(); // Clear the previous token
-	if(index == 2) // Special handle for value in each DB entry
+	if(index == 3) // Special handle for "value" in each DB entry
 	{
 		while(*p)
 		{
@@ -293,13 +304,6 @@ bool tokenize(const char*& p, std::string& token, uint8_t index)
 	return (token.length() > 0);
 }
 
-bool isBigEndian()
-{
-	int n = 1;
-	if(*((char *)&n) == 1) return false;
-	return true;
-}
-
 uint32_t lookupCRC16Table(uint32_t initCRC, uint8_t data)
 {
 	// std::cout << "(initCRC ^ data) & 0xFF = " << uint32_t((initCRC ^ data) & 0xFF) << std::endl;
@@ -322,32 +326,13 @@ uint16_t getCRC16(uint8_t *startAddr, uint32_t numberBytes)
 
 void constructBinaryFile(const std::vector<char>& payload, std::ofstream& binFile)
 {
-	char c = 'H';
-	binFile.write(&c, 1); // DB Header Tag
-	c = 10;
-	binFile.write(&c, 1); // DB revision, currently hardcoded
-	c = 0;
-	for(int i = 0; i < 4; ++i) binFile.write(&c, 1); // Reserved 4 bytes for additional DB parameters
-	uint32_t totalPayloadBytes = payload.size();
-	// std::cout << "totalPayloadBytes = " << totalPayloadBytes << std::endl;
-	if(!isBigEndian())
-	{
-		uint32_t highhigh = (totalPayloadBytes & 0xFF000000) >> 24;
-		uint32_t lowlow = (totalPayloadBytes & 0xFF) << 24;
-		uint32_t high = (totalPayloadBytes & 0x00FF0000) >> 8;
-		uint32_t low = (totalPayloadBytes & 0xFF00) << 8;
-		totalPayloadBytes = highhigh | high | low | lowlow;
-	}
-	for(int i = 0; i < 4; ++i) binFile.write((char *)&totalPayloadBytes + i, 1); // Total bytes of payload (all DB entries)
-	for(const auto& ch : payload) binFile.write(&ch, 1); // Write DB payload (converted DB entries)
-	c = 'E';
-	binFile.write(&c, 1); // DB End Tag
-	uint16_t crc16 = getCRC16((uint8_t *)payload.data(), payload.size());
-	// std::cout << "crc16 = " << crc16 << std::endl;
-	if(!isBigEndian())
-	{
-		uint16_t high = (crc16 & 0xFF00) >> 8;
-		crc16 = (crc16 << 8) | high;
-	}
-	for(int i = 0; i < 2; ++i) binFile.write((char *)&crc16 + i, 1); // CRC16 Checksum
+	binFile.put('H'); // DB Header Tag
+	binFile.put((char)10); // DB revision, currently hardcoded
+	for(int i = 0; i < 4; ++i) binFile.put((char)0); // Reserved 4 bytes for additional DB parameters
+	uint32_t totalPayloadBytes = htobe32(payload.size());
+	for(int i = 0; i < 4; ++i) binFile.put(*((char *)(&totalPayloadBytes) + i)); // Total bytes of payload (all DB entries)
+	for(const auto& c : payload) binFile.put(c); // Write DB payload (converted DB entries)
+	binFile.put('E'); // DB End Tag
+	uint16_t crc16 = htobe16(getCRC16((uint8_t *)payload.data(), payload.size()));
+	for(int i = 0; i < 2; ++i) binFile.put(*((char *)(&crc16) + i)); // CRC16 Checksum
 }
