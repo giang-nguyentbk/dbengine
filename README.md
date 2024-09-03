@@ -25,8 +25,8 @@ enum TypeOfEntry_e {
 
 Example: databaseA.txt
 /* This is comment sections */
-/board_1.12.1/temperatureLevels		U8	-10, 30, 80, 150
-/board_1.41.x/initPatterns		CHAR	"L P F"		/* This means all boards for 1.41.x generation such as 1.41.1 or 1.41.12,... will be applied for this key */
+/board_1.12.1/temperatureLevels		R	U8	-10, 30, 80, 150
+/board_1.41.x/initPatterns		RW	CHAR	"L P F"		/* This means all boards for 1.41.x generation such as 1.41.1 or 1.41.12,... will be applied for this key */
 
 2. Next step, will we write an script, python or maybe C program to concatenate all text database files into one file probably named swdb.bin.txt.
 The program/script will remove all comments in text database files as well.
@@ -77,6 +77,6 @@ Example: swdb.bin
 
 ```
 
-![](./assets/dbengine-test.png)
+![](./assets/dbengine-test.png?raw=true)
 
-![](./assets/dbengine-binary.png)
+![](./assets/dbengine-binary.png?raw=true)
